@@ -1,12 +1,12 @@
 import { CONFIG } from '@/lib/config';
-import type { MCPResponse } from '@/types';
+import type { MCPResponse, DatabaseCredentials } from '@/types';
 
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/$/, '');
 }
 
 export function useMCP() {
-  async function callMCP(tool: string, input: unknown): Promise<MCPResponse> {
+  async function callMCP(tool: string, input: unknown, credentials?: DatabaseCredentials): Promise<MCPResponse> {
     if (!CONFIG.mcpBaseUrl) {
       return {
         success: false,
@@ -21,7 +21,11 @@ export function useMCP() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ tool, input }),
+        body: JSON.stringify({ 
+          tool, 
+          input,
+          ...(credentials && { credentials })
+        }),
         cache: 'no-store'
       });
 

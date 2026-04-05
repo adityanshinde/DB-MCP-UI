@@ -6,6 +6,24 @@ export type MCPResponse<T = unknown> = {
   error: string | null;
 };
 
+export type DatabaseCredentials = {
+  type: DBType;
+  postgres?: {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+    database: string;
+  };
+  mssql?: {
+    server: string;
+    username: string;
+    password: string;
+    database: string;
+    port?: number;
+  };
+};
+
 export type TableInfo = {
   tableName?: string;
   tablename?: string;

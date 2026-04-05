@@ -4,17 +4,19 @@ import { useMemo, useState } from 'react';
 
 import { CONFIG } from '@/lib/config';
 import { useMCP } from '@/hooks/useMCP';
-import type { DBType, QueryResultPayload, SchemaColumn, StoredProcedureInfo } from '@/types';
+import type { DBType, QueryResultPayload, SchemaColumn, StoredProcedureInfo, DatabaseCredentials } from '@/types';
 import { QueryEditor } from '@/app/components/QueryEditor';
 import { ResultsTable } from '@/app/components/ResultsTable';
 import { ProceduresList } from '@/app/components/ProceduresList';
 import { SchemaViewer } from '@/app/components/SchemaViewer';
 import { Sidebar } from '@/app/components/Sidebar';
+import { CredentialsPanel } from '@/app/components/CredentialsPanel';
 
 const DEFAULT_QUERY = 'SELECT * FROM table_name LIMIT 10';
 
 export default function Page() {
   const { callMCP } = useMCP();
+  const [credentials, setCredentials] = useState<DatabaseCredentials | null>(null);
   const [selectedDB, setSelectedDB] = useState<DBType>(CONFIG.defaultDB);
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState('');
@@ -27,10 +29,32 @@ export default function Page() {
   const [loadingQuery, setLoadingQuery] = useState(false);
   const [procedures, setProcedures] = useState<StoredProcedureInfo[]>([]);
   const [loadingProcedures, setLoadingProcedures] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
 
   const activeLoading = loadingTables || loadingSchema || loadingQuery;
 
   const schemaTitle = useMemo(() => selectedTable || '', [selectedTable]);
+
+  async function handleTestConnection() {
+    if (!credentials) {
+      alert('Please configure credentials first');
+      return;
+    }
+
+    setTestingConnection(true);
+    setError('');
+
+    const response = await callMCP('list_tables', { db: credentials.type }, credentials);
+
+    setTestingConnection(false);
+
+    if (!response.success) {
+      setError(`Connection failed: ${response.error}`);
+      alert(`Connection failed: ${response.error}`);
+    } else {
+      alert('Connection successful!');
+    }
+  }
 
   async function handleLoadTables() {
     setError('');
@@ -39,7 +63,7 @@ export default function Page() {
     setResults([]);
     setSelectedTable('');
 
-    const response = await callMCP('list_tables', { db: selectedDB });
+    const response = await callMCP('list_tables', { db: selectedDB }, credentials || undefined);
     setLoadingTables(false);
 
     if (!response.success) {
@@ -60,7 +84,7 @@ export default function Page() {
     const response = await callMCP('get_table_schema', {
       db: selectedDB,
       table
-    });
+    }, credentials || undefined);
 
     setLoadingSchema(false);
 
@@ -81,7 +105,7 @@ export default function Page() {
     const response = await callMCP('run_query', {
       db: selectedDB,
       query
-    });
+    }, credentials || undefined);
 
     setLoadingQuery(false);
 
@@ -111,7 +135,7 @@ export default function Page() {
 
     const response = await callMCP('list_stored_procedures', {
       db: selectedDB
-    } as never);
+    } as never, credentials || undefined);
 
     setLoadingProcedures(false);
 
@@ -126,25 +150,33 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-screen p-4 text-slate-100 md:p-6">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1600px] flex-col gap-4">
-        <header className="rounded-2xl border border-slate-800 bg-slate-950/80 px-5 py-4 shadow-2xl shadow-sky-950/20">
-          <div className="flex flex-col gap-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-400">MCP UI Dashboard</p>
-            <h1 className="text-2xl font-semibold md:text-3xl">Explore schemas and run queries through MCP</h1>
-            <p className="text-sm text-slate-400">
-              Connected via <span className="text-slate-200">NEXT_PUBLIC_MCP_URL</span>. {activeLoading ? 'Loading...' : 'Ready.'}
-            </p>
-          </div>
-        </header>
+    <main className="min-h-screen bg-slate-900 text-slate-100">
+      <CredentialsPanel
+        credentials={credentials}
+        onCredentialsChange={setCredentials}
+        onTestConnection={handleTestConnection}
+        isTestingConnection={testingConnection}
+      />
 
-        {error ? (
-          <div className="rounded-2xl border border-red-900/60 bg-red-950/60 px-4 py-3 text-sm text-red-200">
-            {error}
-          </div>
-        ) : null}
+      <div className="min-h-screen p-4 md:p-6">
+        <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1600px] flex-col gap-4">
+          <header className="rounded-2xl border border-slate-800 bg-slate-950/80 px-5 py-4 shadow-2xl shadow-sky-950/20">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-400">MCP UI Dashboard</p>
+              <h1 className="text-2xl font-semibold md:text-3xl">Explore schemas and run queries through MCP</h1>
+              <p className="text-sm text-slate-400">
+                Connected via <span className="text-slate-200">NEXT_PUBLIC_MCP_URL</span>. {activeLoading ? 'Loading...' : 'Ready.'}
+              </p>
+            </div>
+          </header>
 
-        <div className="grid flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          {error ? (
+            <div className="rounded-2xl border border-red-900/60 bg-red-950/60 px-4 py-3 text-sm text-red-200">
+              {error}
+            </div>
+          ) : null}
+
+          <div className="grid flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
           <Sidebar
             selectedDB={selectedDB}
             tables={tables}
