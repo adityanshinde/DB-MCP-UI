@@ -76,27 +76,27 @@ export function CredentialsPanel({
   const hasCredentials = credentials !== null;
 
   return (
-    <div className="border-b border-gray-200 bg-gray-50 p-4">
+    <div className="border-b border-slate-800 bg-slate-950/50 p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-semibold rounded-lg bg-sky-600 hover:bg-sky-700 text-white transition"
           >
-            {hasCredentials ? '✓ Custom Database' : '+ Add Credentials'}
+            {isOpen ? '▼' : '▶'} {hasCredentials ? '✓ Custom Database' : '+ Add Credentials'}
           </button>
           {hasCredentials && (
             <button
               onClick={handleClearCredentials}
-              className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
+              className="px-3 py-1 text-sm text-red-400 hover:text-red-300 transition"
             >
               Clear
             </button>
           )}
         </div>
 
-        {hasCredentials && (
-          <span className="text-sm text-gray-600">
+        {hasCredentials && !isOpen && (
+          <span className="text-xs text-slate-400">
             {credentials.type === 'postgres'
               ? `PostgreSQL: ${credentials.postgres?.host}:${credentials.postgres?.port}`
               : `MSSQL: ${credentials.mssql?.server}`}
@@ -105,15 +105,15 @@ export function CredentialsPanel({
       </div>
 
       {isOpen && (
-        <div className="mt-4 p-4 bg-white border border-gray-200 rounded">
+        <div className="mt-4 p-4 bg-slate-900/80 border border-slate-700 rounded-lg">
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Database Type
             </label>
             <select
               value={dbType}
               onChange={(e) => setDbType(e.target.value as DBType)}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+              className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 rounded text-sm"
             >
               <option value="postgres">PostgreSQL</option>
               <option value="mssql">MSSQL</option>
@@ -124,7 +124,7 @@ export function CredentialsPanel({
             <>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Host
                   </label>
                   <input
@@ -132,11 +132,11 @@ export function CredentialsPanel({
                     value={pgHost}
                     onChange={(e) => setPgHost(e.target.value)}
                     placeholder="localhost"
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                    className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Port
                   </label>
                   <input
@@ -144,12 +144,12 @@ export function CredentialsPanel({
                     value={pgPort}
                     onChange={(e) => setPgPort(parseInt(e.target.value) || 5432)}
                     placeholder="5432"
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                    className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                   />
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Username
                 </label>
                 <input
@@ -157,11 +157,11 @@ export function CredentialsPanel({
                   value={pgUsername}
                   onChange={(e) => setPgUsername(e.target.value)}
                   placeholder="postgres"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Password
                 </label>
                 <input
@@ -169,11 +169,11 @@ export function CredentialsPanel({
                   value={pgPassword}
                   onChange={(e) => setPgPassword(e.target.value)}
                   placeholder="password"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Database
                 </label>
                 <input
@@ -181,7 +181,7 @@ export function CredentialsPanel({
                   value={pgDatabase}
                   onChange={(e) => setPgDatabase(e.target.value)}
                   placeholder="mydb"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                 />
               </div>
             </>
@@ -189,7 +189,7 @@ export function CredentialsPanel({
             <>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Server
                   </label>
                   <input
@@ -197,11 +197,11 @@ export function CredentialsPanel({
                     value={mssqlServer}
                     onChange={(e) => setMssqlServer(e.target.value)}
                     placeholder="localhost"
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                    className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Port
                   </label>
                   <input
@@ -209,12 +209,12 @@ export function CredentialsPanel({
                     value={mssqlPort}
                     onChange={(e) => setMssqlPort(parseInt(e.target.value) || 1433)}
                     placeholder="1433"
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                    className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                   />
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Username
                 </label>
                 <input
@@ -222,11 +222,11 @@ export function CredentialsPanel({
                   value={mssqlUsername}
                   onChange={(e) => setMssqlUsername(e.target.value)}
                   placeholder="sa"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Password
                 </label>
                 <input
@@ -234,11 +234,11 @@ export function CredentialsPanel({
                   value={mssqlPassword}
                   onChange={(e) => setMssqlPassword(e.target.value)}
                   placeholder="password"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Database
                 </label>
                 <input
@@ -246,7 +246,7 @@ export function CredentialsPanel({
                   value={mssqlDatabase}
                   onChange={(e) => setMssqlDatabase(e.target.value)}
                   placeholder="mydb"
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
                 />
               </div>
             </>
@@ -255,20 +255,20 @@ export function CredentialsPanel({
           <div className="flex gap-2">
             <button
               onClick={handleSaveCredentials}
-              className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition"
             >
               Save Credentials
             </button>
             <button
               onClick={onTestConnection}
               disabled={isTestingConnection}
-              className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:bg-gray-400"
+              className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-semibold hover:bg-sky-700 disabled:opacity-50 transition"
             >
               {isTestingConnection ? 'Testing...' : 'Test Connection'}
             </button>
             <button
               onClick={() => setIsOpen(false)}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+              className="px-4 py-2 bg-slate-700 text-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-600 transition"
             >
               Cancel
             </button>
