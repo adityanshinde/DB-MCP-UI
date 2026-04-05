@@ -30,6 +30,14 @@ export function CredentialsPanel({
   const [mssqlPassword, setMssqlPassword] = useState(credentials?.mssql?.password || '');
   const [mssqlDatabase, setMssqlDatabase] = useState(credentials?.mssql?.database || '');
 
+  const [mysqlHost, setMysqlHost] = useState(credentials?.mysql?.host || 'localhost');
+  const [mysqlPort, setMysqlPort] = useState(credentials?.mysql?.port || 3306);
+  const [mysqlUsername, setMysqlUsername] = useState(credentials?.mysql?.username || 'root');
+  const [mysqlPassword, setMysqlPassword] = useState(credentials?.mysql?.password || '');
+  const [mysqlDatabase, setMysqlDatabase] = useState(credentials?.mysql?.database || '');
+
+  const [sqliteFilePath, setSqliteFilePath] = useState(credentials?.sqlite?.filePath || ':memory:');
+
   const handleSaveCredentials = () => {
     if (dbType === 'postgres') {
       if (!pgHost || !pgUsername || !pgPassword || !pgDatabase) {
@@ -47,7 +55,7 @@ export function CredentialsPanel({
           database: pgDatabase
         }
       });
-    } else {
+    } else if (dbType === 'mssql') {
       if (!mssqlServer || !mssqlUsername || !mssqlPassword || !mssqlDatabase) {
         alert('Please fill in all MSSQL fields');
         return;
@@ -61,6 +69,34 @@ export function CredentialsPanel({
           username: mssqlUsername,
           password: mssqlPassword,
           database: mssqlDatabase
+        }
+      });
+    } else if (dbType === 'mysql') {
+      if (!mysqlHost || !mysqlUsername || !mysqlPassword || !mysqlDatabase) {
+        alert('Please fill in all MySQL fields');
+        return;
+      }
+
+      onCredentialsChange({
+        type: 'mysql',
+        mysql: {
+          host: mysqlHost,
+          port: mysqlPort,
+          username: mysqlUsername,
+          password: mysqlPassword,
+          database: mysqlDatabase
+        }
+      });
+    } else if (dbType === 'sqlite') {
+      if (!sqliteFilePath) {
+        alert('Please specify SQLite file path');
+        return;
+      }
+
+      onCredentialsChange({
+        type: 'sqlite',
+        sqlite: {
+          filePath: sqliteFilePath
         }
       });
     }
@@ -99,7 +135,11 @@ export function CredentialsPanel({
           <span className="text-xs text-slate-400">
             {credentials.type === 'postgres'
               ? `PostgreSQL: ${credentials.postgres?.host}:${credentials.postgres?.port}`
-              : `MSSQL: ${credentials.mssql?.server}`}
+              : credentials.type === 'mssql'
+              ? `MSSQL: ${credentials.mssql?.server}`
+              : credentials.type === 'mysql'
+              ? `MySQL: ${credentials.mysql?.host}:${credentials.mysql?.port}`
+              : `SQLite: ${credentials.sqlite?.filePath}`}
           </span>
         )}
       </div>
@@ -117,6 +157,8 @@ export function CredentialsPanel({
             >
               <option value="postgres">PostgreSQL</option>
               <option value="mssql">MSSQL</option>
+              <option value="mysql">MySQL</option>
+              <option value="sqlite">SQLite</option>
             </select>
           </div>
 
@@ -185,7 +227,7 @@ export function CredentialsPanel({
                 />
               </div>
             </>
-          ) : (
+          ) : dbType === 'mssql' ? (
             <>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
@@ -250,7 +292,88 @@ export function CredentialsPanel({
                 />
               </div>
             </>
-          )}
+          ) : dbType === 'mysql' ? (
+            <>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Host
+                  </label>
+                  <input
+                    type="text"
+                    value={mysqlHost}
+                    onChange={(e) => setMysqlHost(e.target.value)}
+                    placeholder="localhost"
+                    className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Port
+                  </label>
+                  <input
+                    type="number"
+                    value={mysqlPort}
+                    onChange={(e) => setMysqlPort(parseInt(e.target.value) || 3306)}
+                    placeholder="3306"
+                    className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={mysqlUsername}
+                  onChange={(e) => setMysqlUsername(e.target.value)}
+                  placeholder="root"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={mysqlPassword}
+                  onChange={(e) => setMysqlPassword(e.target.value)}
+                  placeholder="password"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Database
+                </label>
+                <input
+                  type="text"
+                  value={mysqlDatabase}
+                  onChange={(e) => setMysqlDatabase(e.target.value)}
+                  placeholder="mydb"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
+                />
+              </div>
+            </>
+          ) : dbType === 'sqlite' ? (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  File Path
+                </label>
+                <input
+                  type="text"
+                  value={sqliteFilePath}
+                  onChange={(e) => setSqliteFilePath(e.target.value)}
+                  placeholder=":memory: or /path/to/database.db"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-500 rounded text-sm"
+                />
+                <p className="text-xs text-slate-400 mt-1">Use :memory: for in-memory database or specify a file path</p>
+              </div>
+            </>
+          ) : null}
 
           <div className="flex gap-2">
             <button

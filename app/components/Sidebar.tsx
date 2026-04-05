@@ -35,6 +35,8 @@ export function Sidebar({
         >
           <option value="postgres">PostgreSQL</option>
           <option value="mssql">MSSQL</option>
+          <option value="mysql">MySQL</option>
+          <option value="sqlite">SQLite</option>
         </select>
       </label>
 
