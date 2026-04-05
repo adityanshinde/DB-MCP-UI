@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { CONFIG } from '@/lib/config';
 import { useMCP } from '@/hooks/useMCP';
+import { useQueryHistory } from '@/hooks/useQueryHistory';
 import type { DBType, QueryResultPayload, SchemaColumn, StoredProcedureInfo, DatabaseCredentials } from '@/types';
 import { QueryEditor } from '@/app/components/QueryEditor';
 import { ResultsTable } from '@/app/components/ResultsTable';
@@ -11,11 +12,15 @@ import { ProceduresList } from '@/app/components/ProceduresList';
 import { SchemaViewer } from '@/app/components/SchemaViewer';
 import { Sidebar } from '@/app/components/Sidebar';
 import { CredentialsPanel } from '@/app/components/CredentialsPanel';
+import { QueryHistoryPanel } from '@/app/components/QueryHistoryPanel';
+import { ExportResults } from '@/app/components/ExportResults';
 
 const DEFAULT_QUERY = 'SELECT * FROM table_name LIMIT 10';
 
 export default function Page() {
   const { callMCP } = useMCP();
+  const { history, addQuery, toggleFavorite, removeItem, clearHistory, getFavorites, isLoaded } = useQueryHistory();
+  
   const [credentials, setCredentials] = useState<DatabaseCredentials | null>(null);
   const [selectedDB, setSelectedDB] = useState<DBType>(CONFIG.defaultDB);
   const [tables, setTables] = useState<string[]>([]);
@@ -32,8 +37,8 @@ export default function Page() {
   const [testingConnection, setTestingConnection] = useState(false);
 
   const activeLoading = loadingTables || loadingSchema || loadingQuery;
-
   const schemaTitle = useMemo(() => selectedTable || '', [selectedTable]);
+  const favorites = getFavorites();
 
   async function handleTestConnection() {
     if (!credentials) {
@@ -101,12 +106,14 @@ export default function Page() {
   async function handleRunQuery() {
     setError('');
     setLoadingQuery(true);
+    const startTime = Date.now();
 
     const response = await callMCP('run_query', {
       db: selectedDB,
       query
     }, credentials || undefined);
 
+    const executionTime = Date.now() - startTime;
     setLoadingQuery(false);
 
     if (!response.success) {
@@ -116,7 +123,13 @@ export default function Page() {
     }
 
     const payload = response.data as QueryResultPayload | null;
+    const rowCount = payload?.rows?.length || 0;
     setResults(payload?.rows || []);
+
+    // Add to history
+    if (isLoaded) {
+      addQuery(query, selectedDB, executionTime, rowCount);
+    }
   }
 
   function handleDBChange(db: DBType) {
@@ -177,27 +190,50 @@ export default function Page() {
           ) : null}
 
           <div className="grid flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <Sidebar
-            selectedDB={selectedDB}
-            tables={tables}
-            selectedTable={selectedTable}
-            loadingTables={loadingTables}
-            onDBChange={handleDBChange}
-            onLoadTables={handleLoadTables}
-            onSelectTable={handleSelectTable}
-          />
+            <div className="flex flex-col gap-4">
+              <Sidebar
+                selectedDB={selectedDB}
+                tables={tables}
+                selectedTable={selectedTable}
+                loadingTables={loadingTables}
+                onDBChange={handleDBChange}
+                onLoadTables={handleLoadTables}
+                onSelectTable={handleSelectTable}
+              />
+              {isLoaded && (
+                <QueryHistoryPanel
+                  history={history}
+                  favorites={favorites}
+                  onSelectQuery={setQuery}
+                  onToggleFavorite={toggleFavorite}
+                  onRemove={removeItem}
+                  onClearHistory={clearHistory}
+                />
+              )}
+            </div>
 
-          <div className="flex min-w-0 flex-col gap-4">
-            <QueryEditor query={query} loading={loadingQuery} onQueryChange={setQuery} onRun={handleRunQuery} />
-            <SchemaViewer tableName={schemaTitle} columns={schema} loading={loadingSchema} />
-            <ResultsTable rows={results} error={error} loading={loadingQuery} />
-            <ProceduresList
-              db={selectedDB}
-              procedures={procedures}
-              loading={loadingProcedures}
-              error={error}
-              onReload={handleLoadProcedures}
-            />
+            <div className="flex min-w-0 flex-col gap-4">
+              <QueryEditor query={query} loading={loadingQuery} onQueryChange={setQuery} onRun={handleRunQuery} />
+              
+              <div className="flex gap-2 items-center">
+                <ExportResults data={results} disabled={loadingQuery || results.length === 0} />
+                {results.length > 0 && (
+                  <span className="text-sm text-slate-400">
+                    {results.length} row{results.length !== 1 ? 's' : ''} returned
+                  </span>
+                )}
+              </div>
+
+              <SchemaViewer tableName={schemaTitle} columns={schema} loading={loadingSchema} />
+              <ResultsTable rows={results} error={error} loading={loadingQuery} />
+              <ProceduresList
+                db={selectedDB}
+                procedures={procedures}
+                loading={loadingProcedures}
+                error={error}
+                onReload={handleLoadProcedures}
+              />
+            </div>
           </div>
         </div>
       </div>

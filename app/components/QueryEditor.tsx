@@ -1,3 +1,7 @@
+'use client';
+
+import { SQLEditorWithHighlight } from '@/lib/sqlHighlighter';
+
 type QueryEditorProps = {
   query: string;
   loading: boolean;
@@ -12,6 +16,7 @@ export function QueryEditor({ query, loading, onQueryChange, onRun }: QueryEdito
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-sky-400">Query Editor</p>
           <h2 className="mt-1 text-lg font-semibold text-slate-100">Run safe read-only SQL through MCP</h2>
+          <p className="mt-1 text-xs text-slate-400">💡 Tip: Press Ctrl+Enter to run query, Tab to indent</p>
         </div>
         <button
           type="button"
@@ -23,11 +28,11 @@ export function QueryEditor({ query, loading, onQueryChange, onRun }: QueryEdito
         </button>
       </div>
 
-      <textarea
+      <SQLEditorWithHighlight
         value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        spellCheck={false}
-        className="min-h-40 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 font-mono text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-400"
+        onChange={onQueryChange}
+        onRun={onRun}
+        loading={loading}
         placeholder="SELECT * FROM table_name LIMIT 10"
       />
     </section>
