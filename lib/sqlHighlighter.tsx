@@ -1,73 +1,115 @@
-import { useState, useRef, useEffect } from 'react';
+'use client';
 
-// Simple SQL syntax highlighting
-function highlightSQL(sql: string): string {
-  const keywords = [
-    'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN',
-    'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'ORDER', 'BY', 'GROUP',
-    'HAVING', 'LIMIT', 'OFFSET', 'UNION', 'INTERSECT', 'EXCEPT', 'DISTINCT',
-    'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'AS', 'NULL', 'IS', 'EXISTS',
-    'CREATE', 'TABLE', 'DROP', 'ALTER', 'INSERT', 'UPDATE', 'DELETE'
-  ];
+import React, { useEffect, useRef, useState } from 'react';
 
-  const keywordPattern = new RegExp(`\\b(${keywords.join('|')})\\b`, 'gi');
-  const stringPattern = /'([^']|\\')*'/g;
-  const numberPattern = /\b\d+\b/g;
-  const commentPattern = /--.*/g;
-
-  let highlighted = sql
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  // Comments (gray)
-  highlighted = highlighted.replace(commentPattern, '<span class="text-slate-500">$&</span>');
-
-  // Strings (green)
-  highlighted = highlighted.replace(stringPattern, '<span class="text-green-400">$&</span>');
-
-  // Numbers (cyan)
-  highlighted = highlighted.replace(numberPattern, '<span class="text-cyan-400">$&</span>');
-
-  // Keywords (blue)
-  highlighted = highlighted.replace(keywordPattern, '<span class="text-blue-400 font-semibold">$&</span>');
-
-  return highlighted;
-}
-
-type SQLEditorWithHighlightProps = {
+interface SQLEditorWithHighlightProps {
   value: string;
   onChange: (value: string) => void;
-  onRun: () => void;
-  loading: boolean;
-  placeholder?: string;
-};
+  onRun?: () => void;
+  loading?: boolean;
+}
+
+const SQL_KEYWORDS = [
+  'SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON',
+  'GROUP', 'BY', 'ORDER', 'HAVING', 'LIMIT', 'OFFSET', 'INSERT', 'INTO', 'VALUES',
+  'UPDATE', 'SET', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TABLE', 'DATABASE', 'INDEX',
+  'PRIMARY', 'KEY', 'CONSTRAINT', 'UNIQUE', 'NOT', 'NULL', 'DEFAULT', 'CHECK',
+  'AND', 'OR', 'IN', 'BETWEEN', 'LIKE', 'IS', 'AS', 'DISTINCT', 'ALL', 'CASE',
+  'WHEN', 'THEN', 'ELSE', 'END', 'WITH', 'UNION', 'INTERSECT', 'EXCEPT', 'CAST'
+];
+
+function highlightSQL(code: string): React.ReactElement[] {
+  const elements: React.ReactElement[] = [];
+  let lastIndex = 0;
+
+  // Pattern: keywords, strings, numbers, comments
+  const patterns = [
+    { regex: /--[^\n]*/g, className: 'text-slate-500', name: 'comment' }, // Line comment
+    { regex: /\/\*[\s\S]*?\*\//g, className: 'text-slate-500', name: 'blockComment' }, // Block comment
+    { regex: /'([^'\\]|\\.)*'/g, className: 'text-emerald-400', name: 'string' }, // Single-quoted string
+    { regex: /"([^"\\]|\\.)*"/g, className: 'text-emerald-400', name: 'string' }, // Double-quoted string
+    { regex: /\b(?:0x[0-9a-fA-F]+|\d+\.?\d*|\.\d+)\b/g, className: 'text-rose-400', name: 'number' }, // Numbers
+    { regex: new RegExp(`\\b(${SQL_KEYWORDS.join('|')})\\b`, 'gi'), className: 'text-blue-400', name: 'keyword' }
+  ];
+
+  const matches: Array<{ start: number; end: number; className: string }> = [];
+
+  for (const pattern of patterns) {
+    let match;
+    pattern.regex.lastIndex = 0;
+    while ((match = pattern.regex.exec(code)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        className: pattern.className
+      });
+    }
+  }
+
+  // Sort matches by start position
+  matches.sort((a, b) => a.start - b.start);
+
+  // Merge overlapping matches (keep first match)
+  const merged: Array<{ start: number; end: number; className: string }> = [];
+  for (const match of matches) {
+    if (!merged.some((m) => m.start <= match.start && match.start < m.end)) {
+      merged.push(match);
+    }
+  }
+
+  let keyIndex = 0;
+  for (const match of merged) {
+    if (lastIndex < match.start) {
+      elements.push(
+        <span key={keyIndex++}>{code.substring(lastIndex, match.start)}</span>
+      );
+    }
+    elements.push(
+      <span key={keyIndex++} className={match.className}>
+        {code.substring(match.start, match.end)}
+      </span>
+    );
+    lastIndex = match.end;
+  }
+
+  if (lastIndex < code.length) {
+    elements.push(
+      <span key={keyIndex}>{code.substring(lastIndex)}</span>
+    );
+  }
+
+  return elements.length > 0 ? elements : [<span key="0">{code}</span>];
+}
 
 export function SQLEditorWithHighlight({
   value,
   onChange,
   onRun,
-  loading,
-  placeholder = 'SELECT * FROM table_name LIMIT 10'
+  loading
 }: SQLEditorWithHighlightProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+  const [highlightedLines, setHighlightedLines] = useState<React.ReactElement[]>([]);
+
+  useEffect(() => {
+    setHighlightedLines(highlightSQL(value));
+  }, [value]);
+
+  useEffect(() => {
+    if (textareaRef.current && highlightRef.current) {
+      highlightRef.current.scrollTop = textareaRef.current.scrollTop;
+      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  }, [value]);
 
   const handleScroll = () => {
     if (textareaRef.current && highlightRef.current) {
-      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
       highlightRef.current.scrollTop = textareaRef.current.scrollTop;
+      highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Ctrl+Enter or Cmd+Enter to run query
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      onRun();
-    }
-
-    // Tab to insert spaces
     if (e.key === 'Tab') {
       e.preventDefault();
       const textarea = textareaRef.current;
@@ -75,40 +117,68 @@ export function SQLEditorWithHighlight({
 
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const newValue = value.substring(0, start) + '  ' + value.substring(end);
+      const newValue = value.substring(0, start) + '\t' + value.substring(end);
       onChange(newValue);
 
-      // Move cursor after the inserted spaces
       setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 2;
+        textarea.selectionStart = textarea.selectionEnd = start + 1;
       }, 0);
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      onRun?.();
     }
   };
 
   return (
-    <div className="relative rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden">
-      {/* Highlight layer */}
-      <div
-        ref={highlightRef}
-        className="absolute inset-0 pointer-events-none overflow-hidden"
-      >
-        <pre
-          className="p-4 font-mono text-sm leading-6 text-transparent"
-          dangerouslySetInnerHTML={{ __html: highlightSQL(value || placeholder) }}
-        />
+    <div className="relative rounded-2xl border border-slate-800 bg-slate-950/90 p-4 shadow-2xl shadow-sky-950/20 overflow-hidden">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-sky-400">Query Editor</p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-100">Run safe read-only SQL through MCP</h2>
+        </div>
+        <button
+          type="button"
+          onClick={onRun}
+          disabled={loading}
+          className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+          title="Ctrl+Enter to run"
+        >
+          {loading ? 'Running...' : 'Run Query'}
+        </button>
       </div>
 
-      {/* Textarea */}
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onScroll={handleScroll}
-        onKeyDown={handleKeyDown}
-        spellCheck={false}
-        className="relative w-full min-h-40 p-4 font-mono text-sm leading-6 text-slate-100 bg-transparent outline-none resize-none"
-        placeholder={placeholder}
-      />
+      <div className="relative">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onScroll={handleScroll}
+          onKeyDown={handleKeyDown}
+          spellCheck={false}
+          className="relative min-h-40 w-full resize-none rounded-2xl border border-slate-700 bg-transparent px-4 py-3 font-mono text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-400 focus:ring-1 focus:ring-sky-400/20 z-10"
+          placeholder="SELECT * FROM table_name LIMIT 10"
+          style={{
+            background: 'transparent',
+            color: 'transparent',
+            caretColor: 'white',
+            resize: 'none'
+          }}
+        />
+        <div
+          ref={highlightRef}
+          className="absolute inset-0 min-h-40 rounded-2xl bg-slate-900 px-4 py-3 font-mono text-sm leading-6 text-slate-100 pointer-events-none overflow-auto whitespace-pre-wrap break-words"
+          style={{ wordBreak: 'break-word' }}
+        >
+          {highlightedLines}
+        </div>
+      </div>
+
+      <div className="mt-2 text-xs text-slate-500">
+        <span className="mr-3">💡 Ctrl+Enter to run</span>
+        <span>⇥ Tab for indent</span>
+      </div>
     </div>
   );
 }

@@ -19,8 +19,7 @@ const DEFAULT_QUERY = 'SELECT * FROM table_name LIMIT 10';
 
 export default function Page() {
   const { callMCP } = useMCP();
-  const { history, addQuery, toggleFavorite, removeItem, clearHistory, getFavorites, isLoaded } = useQueryHistory();
-  
+  const { history, addQuery, toggleFavorite, deleteQuery, clearHistory } = useQueryHistory();
   const [credentials, setCredentials] = useState<DatabaseCredentials | null>(null);
   const [selectedDB, setSelectedDB] = useState<DBType>(CONFIG.defaultDB);
   const [tables, setTables] = useState<string[]>([]);
@@ -37,8 +36,8 @@ export default function Page() {
   const [testingConnection, setTestingConnection] = useState(false);
 
   const activeLoading = loadingTables || loadingSchema || loadingQuery;
+
   const schemaTitle = useMemo(() => selectedTable || '', [selectedTable]);
-  const favorites = getFavorites();
 
   async function handleTestConnection() {
     if (!credentials) {
@@ -123,13 +122,11 @@ export default function Page() {
     }
 
     const payload = response.data as QueryResultPayload | null;
-    const rowCount = payload?.rows?.length || 0;
-    setResults(payload?.rows || []);
+    const rows = payload?.rows || [];
+    setResults(rows);
 
-    // Add to history
-    if (isLoaded) {
-      addQuery(query, selectedDB, executionTime, rowCount);
-    }
+    // Add to query history
+    addQuery(query, selectedDB, executionTime, rows.length);
   }
 
   function handleDBChange(db: DBType) {
@@ -189,42 +186,27 @@ export default function Page() {
             </div>
           ) : null}
 
-          <div className="grid flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="flex flex-col gap-4">
-              <Sidebar
-                selectedDB={selectedDB}
-                tables={tables}
-                selectedTable={selectedTable}
-                loadingTables={loadingTables}
-                onDBChange={handleDBChange}
-                onLoadTables={handleLoadTables}
-                onSelectTable={handleSelectTable}
-              />
-              {isLoaded && (
-                <QueryHistoryPanel
-                  history={history}
-                  favorites={favorites}
-                  onSelectQuery={setQuery}
-                  onToggleFavorite={toggleFavorite}
-                  onRemove={removeItem}
-                  onClearHistory={clearHistory}
-                />
-              )}
-            </div>
+          <div className="grid flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)_280px]">
+            <Sidebar
+              selectedDB={selectedDB}
+              tables={tables}
+              selectedTable={selectedTable}
+              loadingTables={loadingTables}
+              onDBChange={handleDBChange}
+              onLoadTables={handleLoadTables}
+              onSelectTable={handleSelectTable}
+            />
 
             <div className="flex min-w-0 flex-col gap-4">
               <QueryEditor query={query} loading={loadingQuery} onQueryChange={setQuery} onRun={handleRunQuery} />
-              
-              <div className="flex gap-2 items-center">
-                <ExportResults data={results} disabled={loadingQuery || results.length === 0} />
-                {results.length > 0 && (
-                  <span className="text-sm text-slate-400">
-                    {results.length} row{results.length !== 1 ? 's' : ''} returned
-                  </span>
-                )}
-              </div>
-
               <SchemaViewer tableName={schemaTitle} columns={schema} loading={loadingSchema} />
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">Results</p>
+                  <p className="text-xs text-slate-400">{results.length} rows</p>
+                </div>
+                <ExportResults data={results} tableName="query_results" />
+              </div>
               <ResultsTable rows={results} error={error} loading={loadingQuery} />
               <ProceduresList
                 db={selectedDB}
@@ -234,6 +216,17 @@ export default function Page() {
                 onReload={handleLoadProcedures}
               />
             </div>
+
+            <aside className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 overflow-auto max-h-[calc(100vh-12rem)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400 mb-3">Query History</p>
+              <QueryHistoryPanel
+                history={history}
+                onSelectQuery={setQuery}
+                onToggleFavorite={toggleFavorite}
+                onDeleteQuery={deleteQuery}
+                onClearHistory={clearHistory}
+              />
+            </aside>
           </div>
         </div>
       </div>

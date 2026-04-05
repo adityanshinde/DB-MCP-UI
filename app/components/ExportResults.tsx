@@ -1,77 +1,68 @@
 'use client';
 
 import { useState } from 'react';
-import { exportToCSV, exportToJSON, exportToSQL, copyToClipboard } from '@/lib/exportUtils';
+import { exportToCSV, exportToJSON, exportToSQLInsert, copyToClipboard } from '@/lib/exportUtils';
 
-type ExportResultsProps = {
+interface ExportResultsProps {
   data: Array<Record<string, unknown>>;
-  disabled?: boolean;
-};
+  tableName?: string;
+}
 
-export function ExportResults({ data, disabled = false }: ExportResultsProps) {
+export function ExportResults({ data, tableName = 'results' }: ExportResultsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const hasData = data.length > 0;
+  if (data.length === 0) {
+    return null;
+  }
 
-  const handleExportCSV = () => {
-    const timestamp = new Date().toISOString().slice(0, 10);
-    exportToCSV(data, `query_results_${timestamp}.csv`);
-    setIsOpen(false);
-  };
-
-  const handleExportJSON = () => {
-    const timestamp = new Date().toISOString().slice(0, 10);
-    exportToJSON(data, `query_results_${timestamp}.json`);
-    setIsOpen(false);
-  };
-
-  const handleExportSQL = () => {
-    const timestamp = new Date().toISOString().slice(0, 10);
-    exportToSQL(data, 'imported_data', `query_results_${timestamp}.sql`);
-    setIsOpen(false);
-  };
-
-  const handleCopyJSON = () => {
-    copyToClipboard(JSON.stringify(data, null, 2));
-    alert('Copied to clipboard!');
-  };
+  const timestamp = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="relative">
+    <div className="relative inline-block">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        disabled={disabled || !hasData}
-        className="px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-        title="Export query results"
+        className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition"
       >
-        📥 Export
+        ↓ Export ({data.length} rows)
       </button>
 
-      {isOpen && hasData && (
-        <div className="absolute top-full right-0 mt-2 bg-slate-800 border border-slate-700 rounded shadow-lg z-50">
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-48 rounded-lg border border-slate-700 bg-slate-900 shadow-lg z-10">
           <button
-            onClick={handleExportCSV}
-            className="block w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700 transition-colors border-b border-slate-700"
+            onClick={() => {
+              exportToCSV(data, `${tableName}_${timestamp}.csv`);
+              setIsOpen(false);
+            }}
+            className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 first:rounded-t-lg"
           >
-            📊 Export as CSV
+            📄 CSV
           </button>
           <button
-            onClick={handleExportJSON}
-            className="block w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700 transition-colors border-b border-slate-700"
+            onClick={() => {
+              exportToJSON(data, `${tableName}_${timestamp}.json`);
+              setIsOpen(false);
+            }}
+            className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800"
           >
-            📄 Export as JSON
+            {} JSON
           </button>
           <button
-            onClick={handleExportSQL}
-            className="block w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700 transition-colors border-b border-slate-700"
+            onClick={() => {
+              exportToSQLInsert(data, tableName, `${tableName}_${timestamp}.sql`);
+              setIsOpen(false);
+            }}
+            className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800"
           >
-            🔲 Export as SQL INSERT
+            ⌨️ SQL INSERT
           </button>
           <button
-            onClick={handleCopyJSON}
-            className="block w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+            onClick={() => {
+              copyToClipboard(data, 'table');
+              setIsOpen(false);
+            }}
+            className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-800 last:rounded-b-lg"
           >
-            📋 Copy JSON to Clipboard
+            📋 Copy
           </button>
         </div>
       )}

@@ -1,51 +1,43 @@
-import { useState, useEffect } from 'react';
+'use client';
 
-export type QueryHistoryItem = {
+import { useState, useEffect } from 'react';
+import { DBType } from '@/types';
+
+export interface QueryHistoryItem {
   id: string;
   query: string;
-  database: string;
+  db: DBType;
   timestamp: number;
   executionTime?: number;
   rowCount?: number;
   isFavorite: boolean;
-};
-
-const HISTORY_STORAGE_KEY = 'mcp_query_history';
-const MAX_HISTORY_ITEMS = 50;
+}
 
 export function useQueryHistory() {
   const [history, setHistory] = useState<QueryHistoryItem[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load history from localStorage on mount
+  // Load from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as QueryHistoryItem[];
-        setHistory(parsed);
+    const saved = localStorage.getItem('query-history');
+    if (saved) {
+      try {
+        setHistory(JSON.parse(saved));
+      } catch {
+        setHistory([]);
       }
-    } catch (error) {
-      console.error('Failed to load query history:', error);
     }
-    setIsLoaded(true);
   }, []);
 
   // Save to localStorage whenever history changes
   useEffect(() => {
-    if (!isLoaded) return;
-    try {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-    } catch (error) {
-      console.error('Failed to save query history:', error);
-    }
-  }, [history, isLoaded]);
+    localStorage.setItem('query-history', JSON.stringify(history));
+  }, [history]);
 
-  const addQuery = (query: string, database: string, executionTime?: number, rowCount?: number) => {
+  function addQuery(query: string, db: DBType, executionTime?: number, rowCount?: number) {
     const newItem: QueryHistoryItem = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: Date.now().toString(),
       query,
-      database,
+      db,
       timestamp: Date.now(),
       executionTime,
       rowCount,
@@ -54,45 +46,32 @@ export function useQueryHistory() {
 
     setHistory((prev) => {
       const updated = [newItem, ...prev];
-      // Keep only latest 50 items
-      return updated.slice(0, MAX_HISTORY_ITEMS);
+      // Keep only last 50 queries
+      return updated.slice(0, 50);
     });
+  }
 
-    return newItem;
-  };
-
-  const toggleFavorite = (id: string) => {
+  function toggleFavorite(id: string) {
     setHistory((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
       )
     );
-  };
+  }
 
-  const removeItem = (id: string) => {
+  function deleteQuery(id: string) {
     setHistory((prev) => prev.filter((item) => item.id !== id));
-  };
+  }
 
-  const clearHistory = () => {
+  function clearHistory() {
     setHistory([]);
-  };
-
-  const getFavorites = () => {
-    return history.filter((item) => item.isFavorite);
-  };
-
-  const getRecent = (limit = 10) => {
-    return history.slice(0, limit);
-  };
+  }
 
   return {
     history,
     addQuery,
     toggleFavorite,
-    removeItem,
-    clearHistory,
-    getFavorites,
-    getRecent,
-    isLoaded
+    deleteQuery,
+    clearHistory
   };
 }
