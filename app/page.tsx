@@ -4,9 +4,10 @@ import { useMemo, useState } from 'react';
 
 import { CONFIG } from '@/lib/config';
 import { useMCP } from '@/hooks/useMCP';
-import type { DBType, QueryResultPayload, SchemaColumn } from '@/types';
+import type { DBType, QueryResultPayload, SchemaColumn, StoredProcedureInfo } from '@/types';
 import { QueryEditor } from '@/app/components/QueryEditor';
 import { ResultsTable } from '@/app/components/ResultsTable';
+import { ProceduresList } from '@/app/components/ProceduresList';
 import { SchemaViewer } from '@/app/components/SchemaViewer';
 import { Sidebar } from '@/app/components/Sidebar';
 
@@ -24,6 +25,8 @@ export default function Page() {
   const [loadingTables, setLoadingTables] = useState(false);
   const [loadingSchema, setLoadingSchema] = useState(false);
   const [loadingQuery, setLoadingQuery] = useState(false);
+  const [procedures, setProcedures] = useState<StoredProcedureInfo[]>([]);
+  const [loadingProcedures, setLoadingProcedures] = useState(false);
 
   const activeLoading = loadingTables || loadingSchema || loadingQuery;
 
@@ -98,7 +101,28 @@ export default function Page() {
     setSelectedTable('');
     setSchema([]);
     setResults([]);
+    setProcedures([]);
     setError('');
+  }
+
+  async function handleLoadProcedures() {
+    setError('');
+    setLoadingProcedures(true);
+
+    const response = await callMCP('list_stored_procedures', {
+      db: selectedDB
+    } as never);
+
+    setLoadingProcedures(false);
+
+    if (!response.success) {
+      setProcedures([]);
+      setError(response.error || 'Failed to load stored procedures.');
+      return;
+    }
+
+    const payload = response.data as { procedures?: StoredProcedureInfo[] } | null;
+    setProcedures(payload?.procedures || []);
   }
 
   return (
@@ -135,6 +159,13 @@ export default function Page() {
             <QueryEditor query={query} loading={loadingQuery} onQueryChange={setQuery} onRun={handleRunQuery} />
             <SchemaViewer tableName={schemaTitle} columns={schema} loading={loadingSchema} />
             <ResultsTable rows={results} error={error} loading={loadingQuery} />
+            <ProceduresList
+              db={selectedDB}
+              procedures={procedures}
+              loading={loadingProcedures}
+              error={error}
+              onReload={handleLoadProcedures}
+            />
           </div>
         </div>
       </div>

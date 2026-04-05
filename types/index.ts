@@ -31,3 +31,8 @@ export type QueryResultPayload = {
   };
   rows?: Array<Record<string, unknown>>;
 };
+
+export type StoredProcedureInfo = {
+  schema: string;
+  name: string;
+};
